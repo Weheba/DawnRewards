@@ -6,7 +6,10 @@ import com.google.gson.JsonObject;
 final class ClaimDecision {
     private ClaimDecision() {}
     static boolean isNewGrant(JsonObject response) {
-        return flag(response, "eligible") && flag(response, "granted") && !flag(response, "alreadyClaimed")
+        return flag(response, "eligible") && flag(response, "granted")
+                && response.has("alreadyClaimed") && response.get("alreadyClaimed").isJsonPrimitive()
+                && response.get("alreadyClaimed").getAsJsonPrimitive().isBoolean()
+                && !response.get("alreadyClaimed").getAsBoolean()
                 && response.has("claimId") && response.get("claimId").isJsonPrimitive()
                 && response.get("claimId").getAsString().matches("[A-Za-z0-9_-]{1,128}");
     }
