@@ -17,15 +17,17 @@ This is an integration build. Payout accounting is disabled by default in the co
 ## Install and register
 
 1. Build with `./gradlew test jar`, then copy `build/libs/DawnRewards-0.1.0.jar` into `plugins/` and restart.
-2. Set `hostname` in `plugins/DawnRewards/config.yml` to your server address.
-3. Run `dawnrewards register` in the server console. Publish the returned DNS TXT record.
-4. Run `dawnrewards verify`. The plugin stores its private credential in `config.yml`. No Dawn website login or application is needed.
+2. Sign in at https://dawn.gg/servers/account and verify your registrable root domain with the supplied DNS TXT record. This covers its subdomains. Public statistics remain available without signing in.
+3. Generate plugin credentials for your join address in the server account dashboard. Stop the server, then copy the returned hostname, server ID, plugin token and sequence into `hostname`, `server-id`, `credential` and `sequence` in `plugins/DawnRewards/config.yml`.
+4. Restart and wait for the plugin's first check-in. You can then publish a Partner Servers listing from the dashboard. Backgrounds must pass image moderation before they can be published. No partner application is required.
 5. Configure `rewards.daily` and `rewards.weekly` console commands. `{player}` and `{uuid}` are substituted with the authenticated online player. Empty lists disable a reward. Restart after configuration changes.
 6. Players use `/dawnrewards daily` and `/dawnrewards weekly`.
 
 Preserve the configuration and `reward-grants.log` across restarts. Never share the credential. The plugin refuses to start on offline-mode servers. Proxy forwarding requires a future explicit identity adapter and is not supported in this release.
 
-To attach another address to the same server, run `dawnrewards alias other.example.com`, publish its DNS TXT challenge, then run `dawnrewards verifyalias other.example.com`. Shared IPs and arbitrary subdomains are never automatically treated as proof of common ownership.
+If a credential is lost, explicitly rotate it in the dashboard, stop the server and replace both the credential and sequence with the returned values before restarting. Rotation invalidates the previous credential.
+
+The older console `register` and `verify` commands remain available for integration testing, but do not link a server to a Dawn owner account. Console aliases must stay within the same registrable domain. Shared IPs do not establish ownership.
 
 ## Proof transport
 
@@ -35,7 +37,7 @@ The `dawn:affiliate` incoming plugin channel accepts an ASCII opaque signed proo
 
 The backend owns eligibility and UTC daily/weekly boundaries. A newly granted claim is durably reserved before console commands run, and an already-claimed response never reruns commands. If the process crashes after reservation, the player disconnects, or a reward command fails, an operator must reconcile it manually. Generic console commands cannot provide an atomic transaction with a remote claim service; this design favors preventing duplicates. Use idempotent reward commands when available.
 
-For a completed UTC month, run `dawnrewards invoice YYYY-MM` to create the backend's immutable invoice snapshot. This does not send an invoice or pay funds. Use the snapshot and the public monthly statistics at https://dawn.gg/servers for invoice submission through Dawn support.
+For a completed UTC month, save private payment details and submit your invoice at https://dawn.gg/servers/account. The console `dawnrewards invoice YYYY-MM` command produces an estimate snapshot only; it is not a separate payable submission and does not transfer funds. The owner dashboard and listing workflow require the companion backend and website updates to be deployed.
 
 ## Dependencies
 
