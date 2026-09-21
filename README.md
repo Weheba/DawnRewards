@@ -1,6 +1,14 @@
 # DawnRewards
 
-Server-side rewards plugin for Dawn's server affiliate program. Supports Paper/Spigot 1.20.4+ on Java 17+. Folia and proxy installations are not supported by this first release.
+Server-side rewards plugin for Dawn's server affiliate program. Target compatibility: **Paper 1.20.1 through 26.3**. Folia, standalone Spigot, and proxy installations are outside the supported range for this release.
+
+## Server compatibility
+
+The plugin compiles against the Bukkit API from 1.20.1, which Paper implements, and uses `api-version: '1.20'` so older supported servers can load it. Java 17 bytecode preserves the older server baseline. Run each Paper server with its required Java version; the plugin's bytecode target does not mean newer Paper versions run on Java 17. Paper's current guidance recommends Java 21 for 1.20 through 1.21.11 and Java 25 for 26.1 onward.
+
+The build and automated tests validate the 1.20.1 API baseline. The full Paper 1.20.1 through 26.3 runtime matrix has not been tested. The upper endpoint is a compatibility target, not a claim that every server version has been verified.
+
+References: [Paper Java requirements](https://docs.papermc.io/paper/getting-started/), [plugin API version](https://docs.papermc.io/paper/dev/plugin-yml/), and [Paper version format](https://docs.papermc.io/paper/dev/project-setup/).
 
 ## Rollout status
 
