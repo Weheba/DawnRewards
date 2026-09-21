@@ -1,0 +1,26 @@
+# Paper/Spigot 1.20.4+, Java 17+. Folia is not supported.
+hostname: play.example.com
+# Obtained by /dawnrewards register and /dawnrewards verify after DNS ownership proof.
+# Keep this configuration private. Do not paste credentials into public support tickets.
+server-id: ''
+credential: ''
+registration-token: ''
+sequence: 0
+
+# Commands run as console, on the main server thread, after an accepted backend claim.
+# {player} is the authenticated online player's Minecraft name; {uuid} is their UUID.
+# Empty lists disable that reward. Add commands appropriate for your server's economy.
+rewards:
+  daily: []
+  weekly: []
+
+messages:
+  help: 'Use /dawnrewards daily or /dawnrewards weekly to claim your Dawn reward.'
+  player-only: 'Players can claim rewards in game.'
+  unavailable: 'Dawn rewards are temporarily unavailable. Please try again later.'
+  not-ready: 'This server has not configured Dawn rewards yet.'
+  proof-required: 'Join with a supported Dawn client to verify your reward eligibility.'
+  already-claimed: 'You have already claimed this reward for the current period.'
+  disabled: 'This reward has not been configured by the server.'
+  granted: 'Your Dawn reward has been claimed!'
+  pending: 'Your reward request is already being processed.'

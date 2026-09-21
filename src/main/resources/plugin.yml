@@ -1,0 +1,13 @@
+name: DawnRewards
+version: '${version}'
+main: gg.dawn.rewards.DawnRewardsPlugin
+api-version: '1.20'
+description: Verified Dawn daily and weekly rewards and server affiliate participation.
+website: https://dawn.gg/servers
+commands:
+  dawnrewards:
+    description: Claim a Dawn reward or configure server participation.
+    usage: /dawnrewards [daily|weekly|status|register|verify]
+permissions:
+  dawnrewards.admin:
+    default: op
