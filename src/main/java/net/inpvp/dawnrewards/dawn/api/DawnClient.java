@@ -57,7 +57,11 @@ public class DawnClient {
         return send(request, ClientPresence.class);
     }
 
-    public CompletableFuture<HeartbeatResponse> sendHeartbeat(Collection<UUID> playerIds) {
+    /**
+     * Replaces the roster Dawn holds for one instance. Rosters of different instances add up, which
+     * is how a network shares one plugin token across all of its servers.
+     */
+    public CompletableFuture<HeartbeatResponse> sendHeartbeat(String instance, Collection<UUID> playerIds) {
         requireCredential();
 
         if (playerIds.size() > MAX_ROSTER_SIZE) {
@@ -66,7 +70,7 @@ public class DawnClient {
 
         var players = playerIds.stream().map(RosterEntry::new).toList();
         var sequence = heartbeatSequence.updateAndGet(last -> Math.max(last + 1, System.currentTimeMillis()));
-        var request = post(affiliateUri("heartbeat"), new HeartbeatRequest(sequence, players));
+        var request = post(affiliateUri("heartbeat"), new HeartbeatRequest(instance, sequence, players));
         return send(request, HeartbeatResponse.class);
     }
 
@@ -171,7 +175,7 @@ public class DawnClient {
     private record RosterEntry(UUID uuid) {
     }
 
-    private record HeartbeatRequest(long sequence, List<RosterEntry> players) {
+    private record HeartbeatRequest(String instance, long sequence, List<RosterEntry> players) {
     }
 
     private record RewardClaimRequest(UUID uuid, String period) {
