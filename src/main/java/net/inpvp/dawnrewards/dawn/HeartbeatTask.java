@@ -8,6 +8,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,18 +42,16 @@ public class HeartbeatTask {
     }
 
     private void collectRoster() {
+        // Each heartbeat replaces the whole roster of this server on Dawn, so it has to fit in one request.
+        // Dawn players go first: they are the only ones who can earn if the server is over the limit.
+        var tracker = plugin.getDawnPlayerTracker();
         var roster = plugin.getServer().getOnlinePlayers().stream()
                 .map(Player::getUniqueId)
+                .sorted(Comparator.comparing((UUID id) -> !tracker.isDawnConnected(id)))
+                .limit(DawnClient.MAX_ROSTER_SIZE)
                 .toList();
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> sendInBatches(roster));
-    }
-
-    private void sendInBatches(List<UUID> roster) {
-        for (var start = 0; start < roster.size(); start += DawnClient.MAX_ROSTER_SIZE) {
-            var end = Math.min(start + DawnClient.MAX_ROSTER_SIZE, roster.size());
-            send(roster.subList(start, end));
-        }
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> send(roster));
     }
 
     private void send(List<UUID> roster) {

@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 @NullMarked
 public class DawnClient {
@@ -41,6 +42,10 @@ public class DawnClient {
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
+    // Dawn rejects a heartbeat whose sequence is not above the last accepted one, restarts included.
+    // Wall-clock milliseconds stay ahead of anything this server sent before without persisting a counter.
+    private final AtomicLong heartbeatSequence = new AtomicLong();
+
     private final String pluginToken;
 
     public DawnClient(String pluginToken) {
@@ -60,8 +65,20 @@ public class DawnClient {
         }
 
         var players = playerIds.stream().map(RosterEntry::new).toList();
-        var request = post(affiliateUri("heartbeat"), new HeartbeatRequest(players));
+        var sequence = heartbeatSequence.updateAndGet(last -> Math.max(last + 1, System.currentTimeMillis()));
+        var request = post(affiliateUri("heartbeat"), new HeartbeatRequest(sequence, players));
         return send(request, HeartbeatResponse.class);
+    }
+
+    /**
+     * Registers the daily claim of a player with Dawn. A player only counts toward the earnings of
+     * the server after their first successful claim, and Dawn refuses alts sharing a device or IP.
+     */
+    public CompletableFuture<RewardClaimResponse> claimReward(UUID playerId) {
+        requireCredential();
+
+        var request = post(affiliateUri("rewards/claim"), new RewardClaimRequest(playerId, "daily"));
+        return send(request, RewardClaimResponse.class);
     }
 
     private void requireCredential() {
@@ -154,7 +171,10 @@ public class DawnClient {
     private record RosterEntry(UUID uuid) {
     }
 
-    private record HeartbeatRequest(List<RosterEntry> players) {
+    private record HeartbeatRequest(long sequence, List<RosterEntry> players) {
+    }
+
+    private record RewardClaimRequest(UUID uuid, String period) {
     }
 
 }

@@ -19,6 +19,7 @@ public class Messages {
     private String claimed = "<gray>You claimed the day <#F97316>{day}</#F97316> reward.";
     private String notOnDawn = "<gray>You must be playing through the <#F97316>Dawn Client</#F97316> to claim rewards.";
     private String onCooldown = "<gray>Your next reward is ready in <#F97316>{time}</#F97316>.";
+    private String deviceAlreadyUsed = "<gray>Another account already claimed rewards here from this device or network.";
     private String claimFailed = "<red>Your reward could not be claimed, please try again shortly.";
     private String rewardReady = "<gray>Your daily reward is ready, use <#F97316>/dawn</#F97316> to claim it.";
 
@@ -32,6 +33,10 @@ public class Messages {
 
     public Component onCooldown(String time) {
         return prefixed(onCooldown.replace("{time}", time));
+    }
+
+    public Component deviceAlreadyUsed() {
+        return prefixed(deviceAlreadyUsed);
     }
 
     public Component claimFailed() {
