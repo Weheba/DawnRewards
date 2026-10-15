@@ -20,7 +20,6 @@ import net.inpvp.dawnrewards.storage.DawnUserRepository;
 import net.inpvp.dawnrewards.user.DawnUserCache;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import xyz.xenondevs.invui.InvUI;
 import org.jspecify.annotations.NullMarked;
 
 import java.nio.file.Path;
@@ -49,8 +48,6 @@ public class DawnRewards extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        InvUI.getInstance().setPlugin(this);
-
         if (!loadConfigs() || !hasPluginToken() || !setupDatabase()) {
             getServer().getPluginManager().disablePlugin(this);
             return;
@@ -167,6 +164,7 @@ public class DawnRewards extends JavaPlugin {
         getServer().getPluginManager().registerEvents(dawnPlayerTracker, this);
         getServer().getPluginManager().registerEvents(dawnUserCache, this);
         getServer().getPluginManager().registerEvents(rewardNotifier, this);
+        getServer().getPluginManager().registerEvents(rewardsMenu, this);
     }
 
     private void registerCommands() {

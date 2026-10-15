@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -50,30 +51,31 @@ public class DawnPlayerTracker implements Listener {
         }
 
         try {
-            var cookie = validateCookie(event);
-            var presence = validatePresence(event.getUniqueId());
-
-            var result = cookie.thenCombine(presence, DawnPlayerPresence::new)
-                    .exceptionally(_ -> new DawnPlayerPresence(false, false))
-                    .join();
-
-            presences.put(event.getUniqueId(), result);
+            var presence = validatePresence(event.getUniqueId()).join();
+            presences.put(event.getUniqueId(), new DawnPlayerPresence(false, presence));
         } catch (Throwable error) {
             plugin.getLogger().warning("Could not resolve the Dawn state of " + event.getName() + ": " + error.getMessage());
         }
     }
 
+    // The cookie is read after join: the login-phase connection API is newer than the oldest supported
+    // server, and the Dawn client answers cookie requests in every phase.
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        var player = event.getPlayer();
+        var playerId = player.getUniqueId();
+
+        player.retrieveCookie(COOKIE_KEY)
+                .thenApply(bytes -> parseCookie(player.getName(), bytes))
+                .orTimeout(LOOKUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .exceptionally(error -> false)
+                .thenAccept(cookie -> presences.computeIfPresent(playerId,
+                        (id, current) -> new DawnPlayerPresence(cookie, current.isPresenceValidated())));
+    }
+
     @EventHandler
     public void onPlayerConnectionClose(PlayerConnectionCloseEvent event) {
         presences.remove(event.getPlayerUniqueId());
-    }
-
-    private CompletableFuture<Boolean> validateCookie(AsyncPlayerPreLoginEvent event) {
-        return event.getConnection()
-                .retrieveCookie(COOKIE_KEY)
-                .thenApply(bytes -> parseCookie(event.getName(), bytes))
-                .orTimeout(LOOKUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .exceptionally(_ -> false);
     }
 
     private CompletableFuture<Boolean> validatePresence(UUID playerId) {

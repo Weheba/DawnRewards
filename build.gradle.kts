@@ -16,7 +16,6 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.extendedclip.com/releases/")
     maven("https://repo.aikar.co/content/groups/aikar/")
-    maven("https://repo.xenondevs.xyz/releases")
 }
 
 dependencies {
@@ -29,7 +28,6 @@ dependencies {
     implementation(libs.jacksonDatabind)
     implementation(libs.jacksonJsr310)
     implementation(libs.hikari)
-    implementation(libs.invui)
 
     implementation(libs.sqliteJdbc)
     implementation(libs.mariadbJdbc)
@@ -41,7 +39,7 @@ configurations.runtimeClasspath {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
 paperPluginYaml {
@@ -49,7 +47,7 @@ paperPluginYaml {
     description = "Battlepass style daily rewards for players joining through the Dawn Client"
     authors = listOf("InPvP", "SenseiJu")
     website = "https://dawn.gg"
-    apiVersion = "26.1.2"
+    apiVersion = "1.20"
     main = "net.inpvp.dawnrewards.DawnRewards"
     version = project.version.toString()
     dependencies {
@@ -79,7 +77,6 @@ tasks {
         relocate("com.fasterxml.jackson", "$shadePath.jackson")
         relocate("org.snakeyaml.engine", "$shadePath.snakeyaml")
         relocate("com.zaxxer.hikari", "$shadePath.hikari")
-        relocate("xyz.xenondevs", "$shadePath.invui")
         relocate("com.google.gson", "$shadePath.gson")
         relocate("org.json", "$shadePath.json")
 
