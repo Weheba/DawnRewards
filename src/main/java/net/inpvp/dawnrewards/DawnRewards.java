@@ -62,7 +62,7 @@ public class DawnRewards extends JavaPlugin {
 
         userRepository = database.createUserRepository();
         dawnUserCache = new DawnUserCache(this, userRepository);
-        claimService = new ClaimService(this, dawnPlayerTracker, dawnUserCache, userRepository);
+        claimService = new ClaimService(this, dawnClient, dawnPlayerTracker, dawnUserCache, userRepository);
         rewardsMenu = new RewardsMenu(this);
         rewardNotifier = new RewardNotifier(this);
 

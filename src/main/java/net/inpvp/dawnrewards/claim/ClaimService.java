@@ -2,6 +2,8 @@ package net.inpvp.dawnrewards.claim;
 
 import net.inpvp.dawnrewards.DawnRewards;
 import net.inpvp.dawnrewards.dawn.DawnPlayerTracker;
+import net.inpvp.dawnrewards.dawn.api.DawnClient;
+import net.inpvp.dawnrewards.dawn.api.RewardClaimResponse;
 import net.inpvp.dawnrewards.storage.DawnUserRepository;
 import net.inpvp.dawnrewards.user.ClaimUpdate;
 import net.inpvp.dawnrewards.user.DawnUser;
@@ -10,6 +12,7 @@ import net.inpvp.dawnrewards.util.DurationFormatter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -24,12 +27,14 @@ public class ClaimService {
     private static final Duration CLAIM_WINDOW = Duration.ofHours(24);
 
     private final DawnRewards plugin;
+    private final DawnClient client;
     private final DawnPlayerTracker tracker;
     private final DawnUserCache cache;
     private final DawnUserRepository repository;
 
-    public ClaimService(DawnRewards plugin, DawnPlayerTracker tracker, DawnUserCache cache, DawnUserRepository repository) {
+    public ClaimService(DawnRewards plugin, DawnClient client, DawnPlayerTracker tracker, DawnUserCache cache, DawnUserRepository repository) {
         this.plugin = plugin;
+        this.client = client;
         this.tracker = tracker;
         this.cache = cache;
         this.repository = repository;
@@ -80,6 +85,7 @@ public class ClaimService {
             case GRANTED -> messages.claimed(cache.get(player).getCurrentDay());
             case NOT_ON_DAWN -> messages.notOnDawn();
             case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(timeUntilClaimable(cache.get(player))));
+            case DEVICE_ALREADY_USED -> messages.deviceAlreadyUsed();
             case FAILED -> messages.claimFailed();
         };
     }
@@ -91,6 +97,11 @@ public class ClaimService {
             var user = repository.load(playerId);
             if (!isClaimable(user, now)) {
                 return ClaimResult.ON_COOLDOWN;
+            }
+
+            var denied = registerWithDawn(playerId);
+            if (denied != null) {
+                return denied;
             }
 
             var update = nextClaim(user, now);
@@ -108,6 +119,33 @@ public class ClaimService {
             plugin.getLogger().log(Level.SEVERE, "Could not claim the reward for " + playerId, e);
             return ClaimResult.FAILED;
         }
+    }
+
+    /**
+     * Dawn decides whether this player may claim here. Returns the reason to refuse, or null to go ahead.
+     * The reward and its streak stay local; the daily receipt on Dawn only matters for the first claim.
+     */
+    private @Nullable ClaimResult registerWithDawn(UUID playerId) {
+        RewardClaimResponse response;
+        try {
+            response = client.claimReward(playerId).join();
+        } catch (RuntimeException e) {
+            plugin.getLogger().warning("Dawn could not verify the reward claim of " + playerId + ": " + e.getMessage());
+            return ClaimResult.FAILED;
+        }
+
+        if (response.eligible() || response.isAccountingDisabled()) {
+            return null;
+        }
+        if (response.isNotOnDawn()) {
+            return ClaimResult.NOT_ON_DAWN;
+        }
+        if (response.isIdentityAlreadyUsed()) {
+            return ClaimResult.DEVICE_ALREADY_USED;
+        }
+
+        // not_on_server until the next heartbeat lists the player, or the credential was rotated.
+        return ClaimResult.FAILED;
     }
 
     private boolean isClaimable(DawnUser user, Instant now) {
