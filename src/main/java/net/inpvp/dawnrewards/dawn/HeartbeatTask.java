@@ -1,10 +1,11 @@
 package net.inpvp.dawnrewards.dawn;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.inpvp.dawnrewards.DawnRewards;
 import net.inpvp.dawnrewards.dawn.api.DawnApiException;
 import net.inpvp.dawnrewards.dawn.api.DawnClient;
+import net.inpvp.dawnrewards.util.Schedulers;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -26,21 +27,21 @@ public class HeartbeatTask {
     private final DawnRewards plugin;
     private final DawnClient client;
 
-    private @Nullable BukkitTask task;
+    private @Nullable ScheduledTask task;
 
     public HeartbeatTask(DawnRewards plugin, DawnClient client) {
         this.plugin = plugin;
         this.client = client;
     }
 
-    public void start() {
+    // Synchronized: reloads can come from a player region and the console at once on Folia.
+    public synchronized void start() {
         stop();
 
-        task = plugin.getServer().getScheduler()
-                .runTaskTimer(plugin, this::collectRoster, INTERVAL_TICKS, INTERVAL_TICKS);
+        task = Schedulers.globalTimer(plugin, this::collectRoster, INTERVAL_TICKS, INTERVAL_TICKS);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         if (task != null) {
             task.cancel();
             task = null;
@@ -58,7 +59,7 @@ public class HeartbeatTask {
                 ? online
                 : online.stream().filter(tracker::isDawnConnected).toList();
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> sendInParts(roster));
+        Schedulers.async(plugin, () -> sendInParts(roster));
     }
 
     private void sendInParts(List<UUID> roster) {
@@ -93,7 +94,7 @@ public class HeartbeatTask {
 
         if (cause instanceof DawnApiException dawnError && dawnError.isCredentialProblem()) {
             plugin.getLogger().severe("Dawn rejected the plugin token, stopping heartbeats: " + dawnError.getMessage());
-            plugin.getServer().getScheduler().runTask(plugin, this::stop);
+            Schedulers.global(plugin, this::stop);
             return;
         }
 

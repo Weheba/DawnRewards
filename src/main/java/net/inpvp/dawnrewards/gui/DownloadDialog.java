@@ -17,18 +17,13 @@ import org.jspecify.annotations.NullMarked;
 import java.util.List;
 
 /**
- * Dialogs exist from Paper 1.21.6. This class is only loaded once {@link #isSupported()} says so.
+ * Dialogs exist from Paper 1.21.6. This class is only loaded once {@link RewardsMenu} found them: verifying it
+ * needs the dialog classes, so even asking it whether they exist fails on older servers.
  */
 @NullMarked
 final class DownloadDialog {
 
-    private static final boolean SUPPORTED = classExists("io.papermc.paper.dialog.Dialog");
-
     private DownloadDialog() {
-    }
-
-    static boolean isSupported() {
-        return SUPPORTED;
     }
 
     static void show(Player player, String url) {
@@ -50,14 +45,5 @@ final class DownloadDialog {
                                 .build()),
                         null,
                         1))));
-    }
-
-    private static boolean classExists(String name) {
-        try {
-            Class.forName(name, false, DownloadDialog.class.getClassLoader());
-            return true;
-        } catch (ClassNotFoundException | LinkageError e) {
-            return false;
-        }
     }
 }

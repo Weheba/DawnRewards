@@ -34,6 +34,8 @@ public class RewardsMenu implements Listener {
     private static final int PREVIOUS_SLOT = 30;
     private static final int NEXT_SLOT = 32;
     private static final String DAWN_URL = "https://dawn.gg";
+    // Checked here and not in DownloadDialog, which cannot even be loaded before Paper 1.21.6.
+    private static final boolean DIALOGS_SUPPORTED = classExists("io.papermc.paper.dialog.Dialog");
 
     private final DawnRewards plugin;
 
@@ -198,13 +200,22 @@ public class RewardsMenu implements Listener {
     }
 
     private void showDownload(Player player) {
-        if (DownloadDialog.isSupported()) {
+        if (DIALOGS_SUPPORTED) {
             DownloadDialog.show(player, DAWN_URL);
             return;
         }
 
         player.sendMessage(Text.parse("<gray>Play on this server through the Dawn Client to unlock a new reward every day. ")
                 .append(Text.parse("<#F97316><bold><u>Download the Dawn Client</u>").clickEvent(ClickEvent.openUrl(DAWN_URL))));
+    }
+
+    private static boolean classExists(String name) {
+        try {
+            Class.forName(name, false, RewardsMenu.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
+        }
     }
 
     private static final class Holder implements InventoryHolder {

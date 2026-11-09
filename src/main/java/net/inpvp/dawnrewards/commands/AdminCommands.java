@@ -11,6 +11,7 @@ import co.aikar.commands.annotation.Subcommand;
 import co.aikar.commands.annotation.Syntax;
 import co.aikar.commands.bukkit.contexts.OnlinePlayer;
 import net.inpvp.dawnrewards.DawnRewards;
+import net.inpvp.dawnrewards.util.Schedulers;
 import net.inpvp.dawnrewards.util.Text;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
@@ -45,7 +46,7 @@ public class AdminCommands extends BaseCommand {
     public void onReset(CommandSender sender, OnlinePlayer target) {
         var player = target.getPlayer();
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+        Schedulers.async(plugin, () -> {
             try {
                 plugin.getUserRepository().reset(player.getUniqueId());
 

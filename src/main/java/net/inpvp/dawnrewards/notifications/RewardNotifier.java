@@ -1,11 +1,12 @@
 package net.inpvp.dawnrewards.notifications;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.inpvp.dawnrewards.DawnRewards;
+import net.inpvp.dawnrewards.util.Schedulers;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -16,13 +17,14 @@ public class RewardNotifier implements Listener {
 
     private final DawnRewards plugin;
 
-    private @Nullable BukkitTask task;
+    private @Nullable ScheduledTask task;
 
     public RewardNotifier(DawnRewards plugin) {
         this.plugin = plugin;
     }
 
-    public void start() {
+    // Synchronized: reloads can come from a player region and the console at once on Folia.
+    public synchronized void start() {
         stop();
 
         var interval = plugin.getCfg().getNotifications().getNotifyRepeatInterval();
@@ -31,10 +33,10 @@ public class RewardNotifier implements Listener {
         }
 
         var ticks = interval * TICKS_PER_SECOND;
-        task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::notifyOnlinePlayers, ticks, ticks);
+        task = Schedulers.globalTimer(plugin, this::notifyOnlinePlayers, ticks, ticks);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         if (task != null) {
             task.cancel();
             task = null;
@@ -49,8 +51,9 @@ public class RewardNotifier implements Listener {
     }
 
     private void notifyOnlinePlayers() {
+        // On Folia the global region owns no players, so each check hops to that player's region.
         for (var player : plugin.getServer().getOnlinePlayers()) {
-            notifyIfReady(player);
+            Schedulers.player(plugin, player, () -> notifyIfReady(player));
         }
     }
 

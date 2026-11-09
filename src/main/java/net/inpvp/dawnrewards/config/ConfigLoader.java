@@ -20,7 +20,7 @@ public class ConfigLoader<T> {
     private final Path path;
     private final Consumer<T> validator;
 
-    private T config;
+    private volatile T config;
 
     public ConfigLoader(Class<T> type, Path path) {
         this(type, path, loaded -> {
