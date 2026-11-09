@@ -87,7 +87,7 @@ public class ClaimService {
         return switch (claim.result()) {
             case GRANTED -> messages.claimed(claim.day());
             case NOT_ON_DAWN -> messages.notOnDawn();
-            case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(claim.wait()));
+            case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(claim.cooldown()));
             case DEVICE_ALREADY_USED -> messages.deviceAlreadyUsed();
             case FAILED -> messages.claimFailed();
         };
@@ -223,14 +223,14 @@ public class ClaimService {
      * The outcome of a claim, with the day it granted or, on cooldown, how long until the next one. Both come from the
      * database row, so the message never depends on the cache, which is missing when the login load failed.
      */
-    private record Claim(ClaimResult result, int day, Duration wait) {
+    private record Claim(ClaimResult result, int day, Duration cooldown) {
 
         private static Claim of(ClaimResult result) {
             return new Claim(result, 0, Duration.ZERO);
         }
 
-        private static Claim onCooldown(Duration wait) {
-            return new Claim(ClaimResult.ON_COOLDOWN, 0, wait);
+        private static Claim onCooldown(Duration cooldown) {
+            return new Claim(ClaimResult.ON_COOLDOWN, 0, cooldown);
         }
     }
 }
