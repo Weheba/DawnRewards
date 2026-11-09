@@ -48,6 +48,7 @@ paperPluginYaml {
     authors = listOf("InPvP", "SenseiJu")
     website = "https://dawn.gg"
     apiVersion = "1.20"
+    foliaSupported = true
     main = "net.inpvp.dawnrewards.DawnRewards"
     version = project.version.toString()
     dependencies {

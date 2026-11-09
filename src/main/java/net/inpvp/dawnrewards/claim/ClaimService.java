@@ -9,6 +9,7 @@ import net.inpvp.dawnrewards.user.ClaimUpdate;
 import net.inpvp.dawnrewards.user.DawnUser;
 import net.inpvp.dawnrewards.user.DawnUserCache;
 import net.inpvp.dawnrewards.util.DurationFormatter;
+import net.inpvp.dawnrewards.util.Schedulers;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NullMarked;
@@ -61,10 +62,10 @@ public class ClaimService {
             return;
         }
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+        Schedulers.async(plugin, () -> {
             var result = tryClaim(playerId);
 
-            plugin.getServer().getScheduler().runTask(plugin, () -> {
+            Schedulers.player(plugin, player, () -> {
                 if (!player.isOnline()) {
                     return;
                 }
@@ -184,10 +185,17 @@ public class ClaimService {
             return;
         }
 
-        var console = plugin.getServer().getConsoleSender();
-        for (var command : reward.getCommands()) {
-            plugin.getServer().dispatchCommand(console, command.replace("{player}", player.getName()));
-        }
+        var commands = reward.getCommands().stream()
+                .map(command -> command.replace("{player}", player.getName()))
+                .toList();
+
+        // Folia only runs console commands on the global region.
+        Schedulers.global(plugin, () -> {
+            var console = plugin.getServer().getConsoleSender();
+            for (var command : commands) {
+                plugin.getServer().dispatchCommand(console, command);
+            }
+        });
     }
 
 }

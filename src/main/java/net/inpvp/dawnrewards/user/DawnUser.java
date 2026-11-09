@@ -17,10 +17,11 @@ public class DawnUser {
 
     private final UUID playerId;
 
-    private int currentDay;
-    private int currentStreak;
-    private int highestStreak;
-    private @Nullable Instant lastClaimAt;
+    // Written by claim/reset threads and read by region threads and PlaceholderAPI, so kept volatile.
+    private volatile int currentDay;
+    private volatile int currentStreak;
+    private volatile int highestStreak;
+    private volatile @Nullable Instant lastClaimAt;
 
     public void reset() {
         this.currentDay = 0;
