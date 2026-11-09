@@ -17,13 +17,14 @@ public class RewardNotifier implements Listener {
 
     private final DawnRewards plugin;
 
-    private volatile @Nullable ScheduledTask task;
+    private @Nullable ScheduledTask task;
 
     public RewardNotifier(DawnRewards plugin) {
         this.plugin = plugin;
     }
 
-    public void start() {
+    // Synchronized: reloads can come from a player region and the console at once on Folia.
+    public synchronized void start() {
         stop();
 
         var interval = plugin.getCfg().getNotifications().getNotifyRepeatInterval();
@@ -35,10 +36,9 @@ public class RewardNotifier implements Listener {
         task = Schedulers.globalTimer(plugin, this::notifyOnlinePlayers, ticks, ticks);
     }
 
-    public void stop() {
-        var current = task;
-        if (current != null) {
-            current.cancel();
+    public synchronized void stop() {
+        if (task != null) {
+            task.cancel();
             task = null;
         }
     }

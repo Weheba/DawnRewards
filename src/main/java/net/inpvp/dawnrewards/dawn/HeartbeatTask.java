@@ -27,23 +27,23 @@ public class HeartbeatTask {
     private final DawnRewards plugin;
     private final DawnClient client;
 
-    private volatile @Nullable ScheduledTask task;
+    private @Nullable ScheduledTask task;
 
     public HeartbeatTask(DawnRewards plugin, DawnClient client) {
         this.plugin = plugin;
         this.client = client;
     }
 
-    public void start() {
+    // Synchronized: reloads can come from a player region and the console at once on Folia.
+    public synchronized void start() {
         stop();
 
         task = Schedulers.globalTimer(plugin, this::collectRoster, INTERVAL_TICKS, INTERVAL_TICKS);
     }
 
-    public void stop() {
-        var current = task;
-        if (current != null) {
-            current.cancel();
+    public synchronized void stop() {
+        if (task != null) {
+            task.cancel();
             task = null;
         }
     }

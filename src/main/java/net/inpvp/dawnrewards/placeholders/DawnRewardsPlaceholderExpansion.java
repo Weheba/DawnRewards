@@ -41,7 +41,11 @@ public class DawnRewardsPlaceholderExpansion extends PlaceholderExpansion {
             return "";
         }
 
-        var user = plugin.getDawnUserCache().get(player);
+        // Called from any thread on Folia, and the user is missing when loading it at login failed.
+        var user = plugin.getDawnUserCache().get(player.getUniqueId());
+        if (user == null) {
+            return "";
+        }
 
         return switch (params) {
             case "connected" -> String.valueOf(plugin.getDawnPlayerTracker().isDawnConnected(player.getUniqueId()));

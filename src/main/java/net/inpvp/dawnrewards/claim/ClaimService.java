@@ -63,27 +63,29 @@ public class ClaimService {
         }
 
         Schedulers.async(plugin, () -> {
-            var result = tryClaim(playerId);
+            var claim = tryClaim(playerId);
 
             Schedulers.player(plugin, player, () -> {
                 if (!player.isOnline()) {
                     return;
                 }
 
-                if (result == ClaimResult.GRANTED) {
-                    giveRewards(player, cache.get(player).getCurrentDay());
+                // The granted day travels with the claim: a reset racing it must not change what is handed out.
+                if (claim.result() == ClaimResult.GRANTED) {
+                    giveRewards(player, claim.day(), () -> player.sendMessage(describe(player, claim)));
+                    return;
                 }
 
-                player.sendMessage(describe(player, result));
+                player.sendMessage(describe(player, claim));
             });
         });
     }
 
-    private Component describe(Player player, ClaimResult result) {
+    private Component describe(Player player, Claim claim) {
         var messages = plugin.getMessages();
 
-        return switch (result) {
-            case GRANTED -> messages.claimed(cache.get(player).getCurrentDay());
+        return switch (claim.result()) {
+            case GRANTED -> messages.claimed(claim.day());
             case NOT_ON_DAWN -> messages.notOnDawn();
             case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(timeUntilClaimable(cache.get(player))));
             case DEVICE_ALREADY_USED -> messages.deviceAlreadyUsed();
@@ -91,23 +93,23 @@ public class ClaimService {
         };
     }
 
-    private ClaimResult tryClaim(UUID playerId) {
+    private Claim tryClaim(UUID playerId) {
         var now = Instant.now();
 
         try {
             var user = repository.load(playerId);
             if (!isClaimable(user, now)) {
-                return ClaimResult.ON_COOLDOWN;
+                return Claim.of(ClaimResult.ON_COOLDOWN);
             }
 
             var denied = registerWithDawn(playerId);
             if (denied != null) {
-                return denied;
+                return Claim.of(denied);
             }
 
             var update = nextClaim(user, now);
             if (!repository.applyClaim(playerId, update, claimableBefore(now))) {
-                return ClaimResult.ON_COOLDOWN;
+                return Claim.of(ClaimResult.ON_COOLDOWN);
             }
 
             var cached = cache.get(playerId);
@@ -115,10 +117,10 @@ public class ClaimService {
                 cached.apply(update);
             }
 
-            return ClaimResult.GRANTED;
+            return new Claim(ClaimResult.GRANTED, update.currentDay());
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not claim the reward for " + playerId, e);
-            return ClaimResult.FAILED;
+            return Claim.of(ClaimResult.FAILED);
         }
     }
 
@@ -178,10 +180,19 @@ public class ClaimService {
     }
 
     public void giveRewards(Player player, int day) {
+        giveRewards(player, day, () -> {
+        });
+    }
+
+    /**
+     * Runs the reward commands, then {@code afterwards} on the player's thread. On Paper all of it happens right away.
+     */
+    private void giveRewards(Player player, int day, Runnable afterwards) {
         var reward = plugin.getRewards().getDay(day);
 
         if (reward == null) {
             plugin.getLogger().warning("No reward is configured for day " + day);
+            afterwards.run();
             return;
         }
 
@@ -195,7 +206,18 @@ public class ClaimService {
             for (var command : commands) {
                 plugin.getServer().dispatchCommand(console, command);
             }
+
+            Schedulers.player(plugin, player, afterwards);
         });
     }
 
+    /**
+     * The outcome of a claim, with the day it granted.
+     */
+    private record Claim(ClaimResult result, int day) {
+
+        private static Claim of(ClaimResult result) {
+            return new Claim(result, 0);
+        }
+    }
 }
