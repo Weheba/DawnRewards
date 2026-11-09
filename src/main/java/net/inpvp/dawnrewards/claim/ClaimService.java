@@ -72,22 +72,22 @@ public class ClaimService {
 
                 // The granted day travels with the claim: a reset racing it must not change what is handed out.
                 if (claim.result() == ClaimResult.GRANTED) {
-                    giveRewards(player, claim.day(), () -> player.sendMessage(describe(player, claim)));
+                    giveRewards(player, claim.day(), () -> player.sendMessage(describe(claim)));
                     return;
                 }
 
-                player.sendMessage(describe(player, claim));
+                player.sendMessage(describe(claim));
             });
         });
     }
 
-    private Component describe(Player player, Claim claim) {
+    private Component describe(Claim claim) {
         var messages = plugin.getMessages();
 
         return switch (claim.result()) {
             case GRANTED -> messages.claimed(claim.day());
             case NOT_ON_DAWN -> messages.notOnDawn();
-            case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(timeUntilClaimable(cache.get(player))));
+            case ON_COOLDOWN -> messages.onCooldown(DurationFormatter.format(claim.wait()));
             case DEVICE_ALREADY_USED -> messages.deviceAlreadyUsed();
             case FAILED -> messages.claimFailed();
         };
@@ -99,7 +99,7 @@ public class ClaimService {
         try {
             var user = repository.load(playerId);
             if (!isClaimable(user, now)) {
-                return Claim.of(ClaimResult.ON_COOLDOWN);
+                return Claim.onCooldown(timeUntilClaimable(user));
             }
 
             var denied = registerWithDawn(playerId);
@@ -109,7 +109,8 @@ public class ClaimService {
 
             var update = nextClaim(user, now);
             if (!repository.applyClaim(playerId, update, claimableBefore(now))) {
-                return Claim.of(ClaimResult.ON_COOLDOWN);
+                // Another claim won the race; its row has the cooldown to show.
+                return Claim.onCooldown(timeUntilClaimable(repository.load(playerId)));
             }
 
             var cached = cache.get(playerId);
@@ -117,7 +118,7 @@ public class ClaimService {
                 cached.apply(update);
             }
 
-            return new Claim(ClaimResult.GRANTED, update.currentDay());
+            return new Claim(ClaimResult.GRANTED, update.currentDay(), Duration.ZERO);
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not claim the reward for " + playerId, e);
             return Claim.of(ClaimResult.FAILED);
@@ -203,21 +204,33 @@ public class ClaimService {
         // Folia only runs console commands on the global region.
         Schedulers.global(plugin, () -> {
             var console = plugin.getServer().getConsoleSender();
-            for (var command : commands) {
-                plugin.getServer().dispatchCommand(console, command);
+            try {
+                for (var command : commands) {
+                    // One broken command must not cost the player the rest of the reward.
+                    try {
+                        plugin.getServer().dispatchCommand(console, command);
+                    } catch (RuntimeException e) {
+                        plugin.getLogger().log(Level.SEVERE, "Reward command failed for " + player.getName() + ": " + command, e);
+                    }
+                }
+            } finally {
+                Schedulers.player(plugin, player, afterwards);
             }
-
-            Schedulers.player(plugin, player, afterwards);
         });
     }
 
     /**
-     * The outcome of a claim, with the day it granted.
+     * The outcome of a claim, with the day it granted or, on cooldown, how long until the next one. Both come from the
+     * database row, so the message never depends on the cache, which is missing when the login load failed.
      */
-    private record Claim(ClaimResult result, int day) {
+    private record Claim(ClaimResult result, int day, Duration wait) {
 
         private static Claim of(ClaimResult result) {
-            return new Claim(result, 0);
+            return new Claim(result, 0, Duration.ZERO);
+        }
+
+        private static Claim onCooldown(Duration wait) {
+            return new Claim(ClaimResult.ON_COOLDOWN, 0, wait);
         }
     }
 }
