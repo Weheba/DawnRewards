@@ -1,11 +1,14 @@
 package net.inpvp.dawnrewards.dawn.api;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,6 +30,7 @@ public class DawnClient {
 
     private static final String PRESENCE_BASE = "https://api.dawn.gg/v2/profile/client-presence/";
     private static final String AFFILIATE_BASE = "https://api.dawn.gg/v2/server-affiliates/";
+    private static final String PARTNER_GRANTS = "https://api.dawn.gg/v2/integrations/partner-grants";
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
@@ -85,6 +89,20 @@ public class DawnClient {
         return send(request, RewardClaimResponse.class);
     }
 
+    /**
+     * Grants a cosmetic to the Dawn account holding a Minecraft name. Uses the partner grant token, a
+     * separate credential from the plugin token. Dawn grants each cosmetic once per player, so repeating
+     * a request answers {@link PartnerGrantResponse#ALREADY_GRANTED} instead of granting twice.
+     */
+    public CompletableFuture<PartnerGrantResponse> grantCosmetic(String grantToken, String minecraftUsername, String cosmetic, @Nullable String deliveryId) {
+        if (grantToken.isBlank()) {
+            throw new IllegalStateException("No Dawn cosmetic grant token is configured");
+        }
+
+        var body = new PartnerGrantRequest(minecraftUsername, cosmetic, deliveryId);
+        return send(post(URI.create(PARTNER_GRANTS), body, grantToken), PartnerGrantResponse.class);
+    }
+
     private void requireCredential() {
         if (pluginToken.isBlank()) {
             throw new IllegalStateException("No Dawn plugin token is configured");
@@ -100,6 +118,10 @@ public class DawnClient {
     }
 
     private HttpRequest post(URI uri, Object body) {
+        return post(uri, body, pluginToken);
+    }
+
+    private HttpRequest post(URI uri, Object body, String token) {
         String json;
         try {
             json = OBJECT_MAPPER.writeValueAsString(body);
@@ -107,19 +129,23 @@ public class DawnClient {
             throw new IllegalArgumentException("Could not serialize the Dawn request body", e);
         }
 
-        return builder(uri, true)
+        return builder(uri, token)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
                 .build();
     }
 
     private HttpRequest.Builder builder(URI uri, boolean authenticated) {
+        return builder(uri, authenticated ? pluginToken : null);
+    }
+
+    private HttpRequest.Builder builder(URI uri, @Nullable String token) {
         var builder = HttpRequest.newBuilder(uri)
                 .timeout(REQUEST_TIMEOUT)
                 .header("Accept", "application/json");
 
-        if (authenticated) {
-            builder.header("Authorization", "Bearer " + pluginToken);
+        if (token != null) {
+            builder.header("Authorization", "Bearer " + token);
         }
         return builder;
     }
@@ -179,6 +205,13 @@ public class DawnClient {
     }
 
     private record RewardClaimRequest(UUID uuid, String period) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record PartnerGrantRequest(
+            @JsonProperty("minecraft_username") String minecraftUsername,
+            String cosmetic,
+            @JsonProperty("delivery_id") @Nullable String deliveryId) {
     }
 
 }

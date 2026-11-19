@@ -31,6 +31,11 @@ dependencies {
 
     implementation(libs.sqliteJdbc)
     implementation(libs.mariadbJdbc)
+
+    testCompileOnly(libs.jspecify)
+    testImplementation(platform(libs.junitBom))
+    testImplementation(libs.junitJupiter)
+    testRuntimeOnly(libs.junitPlatformLauncher)
 }
 
 configurations.runtimeClasspath {
@@ -63,6 +68,10 @@ tasks {
 
     build {
         dependsOn("shadowJar")
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     shadowJar {

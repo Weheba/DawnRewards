@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import net.inpvp.dawnrewards.util.Text;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 @NullMarked
 @NoArgsConstructor
@@ -22,6 +23,9 @@ public class Messages {
     private String deviceAlreadyUsed = "<gray>Another account already claimed rewards here from this device or network.";
     private String claimFailed = "<red>Your reward could not be claimed, please try again shortly.";
     private String rewardReady = "<gray>Your daily reward is ready, use <#F97316>/dawn</#F97316> to claim it.";
+
+    @Comment("Sent when a cosmetic bought on the store reaches the player's Dawn account. {cosmetic} is its slug, empty disables it")
+    private String cosmeticGranted = "<gray>Your Dawn cosmetic is ready. Equip it in the <#F97316>Dawn launcher</#F97316>.";
 
     public Component claimed(int day) {
         return prefixed(claimed.replace("{day}", String.valueOf(day)));
@@ -45,6 +49,13 @@ public class Messages {
 
     public Component rewardReady() {
         return prefixed(rewardReady);
+    }
+
+    public @Nullable Component cosmeticGranted(String cosmetic) {
+        if (cosmeticGranted.isBlank()) {
+            return null;
+        }
+        return prefixed(cosmeticGranted.replace("{cosmetic}", Text.escape(cosmetic)));
     }
 
     public Component prefixed(String message) {

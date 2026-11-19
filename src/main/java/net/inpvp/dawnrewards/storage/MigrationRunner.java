@@ -1,6 +1,5 @@
 package net.inpvp.dawnrewards.storage;
 
-import net.inpvp.dawnrewards.DawnRewards;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -14,18 +13,19 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 @NullMarked
 public class MigrationRunner {
 
     private static final String MIGRATIONS_TABLE = "dawnrewards_migrations";
 
-    private final DawnRewards plugin;
+    private final Logger logger;
     private final DataSource dataSource;
     private final SqlDialect dialect;
 
-    public MigrationRunner(DawnRewards plugin, DataSource dataSource, SqlDialect dialect) {
-        this.plugin = plugin;
+    public MigrationRunner(Logger logger, DataSource dataSource, SqlDialect dialect) {
+        this.logger = logger;
         this.dataSource = dataSource;
         this.dialect = dialect;
     }
@@ -86,7 +86,7 @@ public class MigrationRunner {
     }
 
     private void apply(Connection connection, int version, String sql, String checksum) throws SQLException {
-        plugin.getLogger().info("Applying database migration " + version);
+        logger.info("Applying database migration " + version);
 
         var autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);

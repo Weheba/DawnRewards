@@ -15,6 +15,15 @@ public class Config {
     @Comment("Plugin token from the Dawn account website")
     private String pluginToken = "";
 
+    @Comment({
+            "Cosmetic grant token from Dawn, a separate credential from plugin-token. Leave empty if you do not sell Dawn cosmetics.",
+            "Each store purchase runs this console command, which grants the cosmetic to the buyer's Dawn account:",
+            "  dawnrewards grantcosmetic <player> <cosmetic-slug> [delivery-id]",
+            "Tebex example: dawnrewards grantcosmetic {username} donut-bf-cape {transaction}",
+            "Failed grants are stored and retried for 7 days, see 'dawnrewards grants'."
+    })
+    private String cosmeticGrantToken = "";
+
     private StorageConfig storage = new StorageConfig();
 
     @Comment("Tells Dawn players in chat when their reward is ready to claim")

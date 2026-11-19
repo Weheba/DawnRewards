@@ -7,6 +7,7 @@ import co.aikar.commands.annotation.CommandCompletion;
 import co.aikar.commands.annotation.CommandPermission;
 import co.aikar.commands.annotation.Description;
 import co.aikar.commands.annotation.HelpCommand;
+import co.aikar.commands.annotation.Optional;
 import co.aikar.commands.annotation.Subcommand;
 import co.aikar.commands.annotation.Syntax;
 import co.aikar.commands.bukkit.contexts.OnlinePlayer;
@@ -15,7 +16,10 @@ import net.inpvp.dawnrewards.util.Schedulers;
 import net.inpvp.dawnrewards.util.Text;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.util.logging.Level;
@@ -126,6 +130,35 @@ public class AdminCommands extends BaseCommand {
         return Text.parse(met
                 ? "  <green>✔ <gray>" + label
                 : "  <red>✘ <gray>" + label);
+    }
+
+    @Subcommand("grantcosmetic")
+    @CommandPermission("dawnrewards.commands.grantcosmetic")
+    @Syntax("<player> <cosmetic> [delivery-id]")
+    @CommandCompletion("@players @nothing @nothing")
+    @Description("Grants a Dawn cosmetic for a store purchase, console only")
+    public void onGrantCosmetic(CommandSender sender, String player, String cosmetic, @Optional @Nullable String deliveryId) {
+        // Store purchases arrive through the console. A player with the permission must not mint cosmetics.
+        if (!(sender instanceof ConsoleCommandSender) && !(sender instanceof RemoteConsoleCommandSender)) {
+            sender.sendMessage(plugin.getMessages().prefixed("<red>This command can only be run from the console."));
+            return;
+        }
+
+        plugin.getGrantService().submit(sender, player, cosmetic, deliveryId);
+    }
+
+    @Subcommand("grants")
+    @CommandPermission("dawnrewards.commands.grants")
+    @Description("Lists cosmetic grants that are pending or failed")
+    public void onGrants(CommandSender sender) {
+        plugin.getGrantService().list(sender);
+    }
+
+    @Subcommand("grants retry")
+    @CommandPermission("dawnrewards.commands.grants")
+    @Description("Retries pending, failed and given up cosmetic grants now")
+    public void onGrantsRetry(CommandSender sender) {
+        plugin.getGrantService().retryNow(sender);
     }
 
     @Subcommand("reload")

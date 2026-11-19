@@ -17,6 +17,13 @@ public final class Text {
         return MINI_MESSAGE.deserialize(message);
     }
 
+    /**
+     * Makes text from outside (names, ids, API errors) safe to put inside a MiniMessage string.
+     */
+    public static String escape(String text) {
+        return MINI_MESSAGE.escapeTags(text);
+    }
+
     public static Component plain(String message) {
         return parse(message).decoration(TextDecoration.ITALIC, false);
     }

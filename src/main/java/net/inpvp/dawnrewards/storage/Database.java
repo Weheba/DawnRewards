@@ -47,8 +47,12 @@ public class Database {
         };
     }
 
+    public GrantRepository createGrantRepository() {
+        return new SqlGrantRepository(dataSource, dialect);
+    }
+
     public void migrate() throws SQLException {
-        new MigrationRunner(plugin, dataSource, dialect).migrate();
+        new MigrationRunner(plugin.getLogger(), dataSource, dialect).migrate();
     }
 
     public void close() {

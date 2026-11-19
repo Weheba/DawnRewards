@@ -11,6 +11,7 @@ import net.inpvp.dawnrewards.config.Rewards;
 import net.inpvp.dawnrewards.dawn.DawnPlayerTracker;
 import net.inpvp.dawnrewards.dawn.HeartbeatTask;
 import net.inpvp.dawnrewards.dawn.api.DawnClient;
+import net.inpvp.dawnrewards.grants.GrantService;
 import net.inpvp.dawnrewards.gui.RewardsMenu;
 import net.inpvp.dawnrewards.notifications.RewardNotifier;
 import net.inpvp.dawnrewards.config.Messages;
@@ -42,6 +43,7 @@ public class DawnRewards extends JavaPlugin {
     private ClaimService claimService;
     private RewardsMenu rewardsMenu;
     private RewardNotifier rewardNotifier;
+    private GrantService grantService;
 
     private boolean startupComplete;
     private DawnUserRepository userRepository;
@@ -62,6 +64,7 @@ public class DawnRewards extends JavaPlugin {
         claimService = new ClaimService(this, dawnClient, dawnPlayerTracker, dawnUserCache, userRepository);
         rewardsMenu = new RewardsMenu(this);
         rewardNotifier = new RewardNotifier(this);
+        grantService = new GrantService(this, dawnClient, database.createGrantRepository());
 
         registerListeners();
         registerCommands();
@@ -69,12 +72,17 @@ public class DawnRewards extends JavaPlugin {
 
         rewardNotifier.start();
         heartbeatTask.start();
+        grantService.start();
 
         startupComplete = true;
     }
 
     @Override
     public void onDisable() {
+        if (grantService != null) {
+            grantService.stop();
+        }
+
         if (rewardNotifier != null) {
             rewardNotifier.stop();
         }
